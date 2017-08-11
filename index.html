@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>面向对象改造Bird</title>
+    <style>
+        canvas {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+<canvas width="800" height="600"></canvas>
+<script src="./js/mySky.js"></script>
+<script src="./js/myBird.js"></script>
+<script src="./js/myLand.js"></script>
+<script src="./js/myPipe.js"></script>
+<script src="./js/show.js"></script>
+<script>
+    var c = document.querySelector("canvas");
+    var ctx = c.getContext("2d");
+    //多张图片加载函数
+    function loadImg(arr,callback){
+        var count = 0;
+        var imgList = []; //存储图片对象的数组
+        for(var i=0;i<arr.length;i++){
+            var img = new Image();
+            img.src = "./images/"+arr[i]+".png";
+            imgList[arr[i]] = img;   //对象存入数组
+            img.onload = function(){
+                count++;
+                if(count == arr.length){
+                    callback(imgList);  //全部加载完后执行回调函数
+                }
+            }
+        }
+    }
+
+        var offsetTime; //结束到开始的时间间隔
+        var gameBiginTime; //游戏开始时的时间
+        var timeTotal;  //游戏持续时间
+        
+
+
+
+    
+    loadImg(['birds','sky','land','pipe2','pipe1'],function(imgList){
+        var birdImg = imgList['birds'];
+        var skyImg = imgList['sky'];
+        var landImg = imgList['land'];
+        var pipeUpImg = imgList['pipe2'];
+        var pipeDownImg = imgList['pipe1'];
+
+        //创建mySky对象
+        var sky1 = new MySky({
+            ctx:ctx,
+            skyImg:skyImg,
+            x:0
+        });
+        var sky2 = new MySky({
+            ctx:ctx,
+            skyImg:skyImg,
+            x:skyImg.width
+        });
+
+        //创建小鸟对象
+        var birdArr=[];
+        for(var i=0;i<1;i++){
+           birdArr.push( new MyBird({
+                ctx:ctx,
+                birdImg:birdImg,
+                // x:Math.random()*800,
+                // y:Math.random()*600
+                x:150,
+                y:150
+            }));
+        }
+
+        //创建陆地对象
+        var landArr=[];
+        for(var i=0;i<4;i++){
+            landArr.push(new MyLand({
+                ctx:ctx,
+                landImg:landImg,
+                x:i*landImg.width,
+                y:c.height-landImg.height
+            }));
+        }
+
+        //创建管子对象
+        var pipeArr = [];
+        for(var i=0;i<6;i++){
+            pipeArr.push(new MyPipe({
+                ctx:ctx,
+                x: i*pipeUpImg.width*3,
+                pipeUpImg:pipeUpImg,
+                pipeDownImg:pipeDownImg,
+            }));
+        }
+       var show = new Show({
+           ctx:ctx,
+           c:c
+
+       })
+
+        var endTime = Date.now(); //上一次结束时间
+        gameBiginTime = endTime;
+        //让小鸟飞的函数
+        function fly(){
+
+            startTime = Date.now();
+            offsetTime = startTime - endTime;
+            endTime = startTime;
+
+            ctx.clearRect(0,0,c.width,c.height);
+            ctx.beginPath();  //开始新路径,清除rect
+            //调用绘制天空函数
+            sky1.drawSky();
+            sky2.drawSky();
+
+
+            //绘制管子
+            for(var i=0;i<pipeArr.length;i++){
+                pipeArr[i].drawPipe();
+            }
+            //绘制陆地
+            for(var i=0;i<landArr.length;i++){
+                landArr[i].drawLand();
+            }
+            //绘制小鸟
+            for(var i=0;i<birdArr.length;i++){
+                birdArr[i].drawBird(offsetTime);
+                // 判断小鸟是否到达天和地
+                if(birdArr[i].birdY <= -8 || birdArr[i].birdY > c.height-landImg.height-birdImg.height+5){
+                    show.showGameOver();
+                    return;
+                }
+               
+                // 判断小鸟是否撞上管子
+                if(ctx.isPointInPath(birdArr[i].birdX+birdArr[i].birdW/2,birdArr[i].birdY+birdArr[i].birdH/2)){
+                    show.showGameOver();
+                    return;
+                }
+            }
+            //显示时间
+            show.showTime(startTime-gameBiginTime);
+
+            
+            window.requestAnimationFrame(fly);
+        }
+        fly();
+
+        c.onclick = function(){
+            for(var i=0;i<birdArr.length;i++){
+                birdArr[i].speed =-0.2;
+            }
+        }
+
+
+
+
+
+    });
+
+</script>
+</body>
+</html>
